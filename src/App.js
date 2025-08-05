@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 // We'll use PapaParse for CSV parsing
 import Papa from 'papaparse';
+import StatisticsPage from './StatisticsPage';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
@@ -11,6 +12,7 @@ function App() {
   const [rating, setRating] = useState('');
   const [, forceUpdate] = useState(0); // dummy state to force re-render
   const [loading, setLoading] = useState(true);
+  const [showStatistics, setShowStatistics] = useState(false);
 
   // Load CSV on mount
   useEffect(() => {
@@ -218,6 +220,11 @@ function App() {
 
   if (loading) return <div>Loading games...</div>;
   if (games.length === 0) return <div>No games found.</div>;
+  
+  if (showStatistics) {
+    return <StatisticsPage onBack={() => setShowStatistics(false)} playedGames={playedRef.current} />;
+  }
+  
   const game = games[current];
 
   return (
@@ -524,6 +531,18 @@ function App() {
               boxShadow: '0 2px 8px 0 rgba(16,185,129,0.08)',
               transition: 'background 0.2s, color 0.2s'
             }}>Export Results</button>
+            <button onClick={() => setShowStatistics(true)} style={{
+              padding: '0.5rem 1.2rem',
+              borderRadius: 8,
+              border: 'none',
+              background: '#8b5cf6',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px 0 rgba(139,92,246,0.08)',
+              transition: 'background 0.2s, color 0.2s'
+            }}>View Statistics</button>
           </div>
         </div>
         <div style={{color:'#a1a1aa', fontSize:'0.95rem', marginTop:8}}>

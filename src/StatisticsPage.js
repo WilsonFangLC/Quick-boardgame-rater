@@ -35,29 +35,65 @@ const StatisticsPage = ({ onBack, playedGames }) => {
       return typeof studentRating === 'number';
     });
 
-    // Group games by their student ratings
-    const groupedByRating = ratedGames.reduce((acc, game) => {
-      const rating = playedGames[game.ID];
-      const roundedRating = Math.round(rating * 10) / 10; // Round to 1 decimal place
-      
-      if (!acc[roundedRating]) {
-        acc[roundedRating] = [];
-      }
-      acc[roundedRating].push({
-        ...game,
-        studentRating: rating
-      });
-      return acc;
-    }, {});
+    // Add student ratings to games and sort by rating (highest first)
+    const gamesWithRatings = ratedGames.map(game => ({
+      ...game,
+      studentRating: playedGames[game.ID]
+    })).sort((a, b) => b.studentRating - a.studentRating);
 
-    // Sort tiers by rating (highest first)
-    const sortedTiers = Object.keys(groupedByRating)
-      .map(rating => parseFloat(rating))
-      .sort((a, b) => b - a)
-      .reduce((acc, rating) => {
-        acc[rating] = groupedByRating[rating].sort((a, b) => a.Name.localeCompare(b.Name));
-        return acc;
-      }, {});
+    // Group games by tier ranges for better organization
+    const tierRanges = [
+      { min: 10, max: 10, label: 'S+ Tier', key: '10.0' },
+      { min: 9.5, max: 9.9, label: 'S Tier', key: '9.5-9.9' },
+      { min: 9.0, max: 9.4, label: 'S- Tier', key: '9.0-9.4' },
+      { min: 8.5, max: 8.9, label: 'A+ Tier', key: '8.5-8.9' },
+      { min: 8.0, max: 8.4, label: 'A Tier', key: '8.0-8.4' },
+      { min: 7.5, max: 7.9, label: 'A- Tier', key: '7.5-7.9' },
+      { min: 7.0, max: 7.4, label: 'B+ Tier', key: '7.0-7.4' },
+      { min: 6.5, max: 6.9, label: 'B Tier', key: '6.5-6.9' },
+      { min: 6.0, max: 6.4, label: 'B- Tier', key: '6.0-6.4' },
+      { min: 5.5, max: 5.9, label: 'C+ Tier', key: '5.5-5.9' },
+      { min: 5.0, max: 5.4, label: 'C Tier', key: '5.0-5.4' },
+      { min: 4.5, max: 4.9, label: 'C- Tier', key: '4.5-4.9' },
+      { min: 4.0, max: 4.4, label: 'D+ Tier', key: '4.0-4.4' },
+      { min: 3.5, max: 3.9, label: 'D Tier', key: '3.5-3.9' },
+      { min: 3.0, max: 3.4, label: 'D- Tier', key: '3.0-3.4' },
+      { min: 0, max: 2.9, label: 'F Tier', key: '0-2.9' }
+    ];
+
+    const groupedByTier = {};
+    let currentRank = 1;
+
+    // Add rank to each game and group by tier
+    gamesWithRatings.forEach(game => {
+      // Add rank to game
+      game.rank = currentRank++;
+      
+      // Find which tier this game belongs to
+      const tier = tierRanges.find(range => 
+        game.studentRating >= range.min && game.studentRating <= range.max
+      );
+      
+      if (tier) {
+        if (!groupedByTier[tier.key]) {
+          groupedByTier[tier.key] = {
+            label: tier.label,
+            range: `${tier.min === tier.max ? tier.min : tier.min + '-' + tier.max}`,
+            games: [],
+            avgRating: tier.min + (tier.max - tier.min) / 2
+          };
+        }
+        groupedByTier[tier.key].games.push(game);
+      }
+    });
+
+    // Sort tiers to maintain high-to-low order
+    const sortedTiers = {};
+    tierRanges.forEach(range => {
+      if (groupedByTier[range.key]) {
+        sortedTiers[range.key] = groupedByTier[range.key];
+      }
+    });
 
     setStudentTiers(sortedTiers);
 
@@ -242,8 +278,8 @@ const StatisticsPage = ({ onBack, playedGames }) => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {Object.entries(studentTiers).map(([rating, gamesInTier]) => (
-              <div key={rating} style={{
+            {Object.entries(studentTiers).map(([tierKey, tierData]) => (
+              <div key={tierKey} style={{
                 background: '#fff',
                 borderRadius: 20,
                 boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
@@ -252,20 +288,20 @@ const StatisticsPage = ({ onBack, playedGames }) => {
               }}>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '200px 1fr',
+                  gridTemplateColumns: '250px 1fr',
                   alignItems: 'center',
-                  minHeight: '120px'
+                  minHeight: '140px'
                 }}>
                   {/* Tier Label */}
                   <div style={{
-                    background: getTierColor(parseFloat(rating)),
+                    background: getTierColor(tierData.avgRating),
                     color: '#fff',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    minHeight: '120px',
+                    minHeight: '140px',
                     padding: '1rem'
                   }}>
                     <div style={{
@@ -273,87 +309,123 @@ const StatisticsPage = ({ onBack, playedGames }) => {
                       fontWeight: 'bold',
                       marginBottom: '0.5rem'
                     }}>
-                      {getTierLabel(parseFloat(rating))}
+                      {tierData.label}
                     </div>
                     <div style={{
-                      fontSize: '2.5rem',
-                      fontWeight: 'bold',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      fontSize: '1.4rem',
+                      fontWeight: 600,
+                      textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      marginBottom: '0.25rem'
                     }}>
-                      {rating}
+                      {tierData.range}
                     </div>
                     <div style={{
                       fontSize: '0.9rem',
-                      opacity: 0.9,
-                      marginTop: '0.25rem'
+                      opacity: 0.9
                     }}>
-                      {gamesInTier.length} game{gamesInTier.length !== 1 ? 's' : ''}
+                      {tierData.games.length} game{tierData.games.length !== 1 ? 's' : ''}
                     </div>
                   </div>
 
-                  {/* Games Thumbnails */}
+                  {/* Games with Rankings */}
                   <div style={{
                     display: 'flex',
                     flexWrap: 'wrap',
-                    gap: '12px',
+                    gap: '16px',
                     padding: '1.5rem',
-                    alignItems: 'center'
+                    alignItems: 'flex-start'
                   }}>
-                    {gamesInTier.map(game => (
-                      <a
-                        key={game.ID}
-                        href={`https://boardgamegeek.com${game.URL}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={`${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
-                        style={{
-                          display: 'block',
-                          borderRadius: 12,
-                          overflow: 'hidden',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          transition: 'transform 0.2s, box-shadow 0.2s',
-                          border: `3px solid ${getTierColor(parseFloat(rating))}`,
-                          position: 'relative'
-                        }}
-                        onMouseOver={e => {
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.transform = 'scale(1)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                        }}
-                      >
-                        <img
-                          src={game.Thumbnail}
-                          alt={game.Name}
-                          style={{
-                            width: 80,
-                            height: 80,
-                            objectFit: 'cover',
-                            display: 'block'
-                          }}
-                        />
-                        {/* Rating Badge */}
+                    {tierData.games.map(game => (
+                      <div key={game.ID} style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        {/* Rank Number */}
                         <div style={{
-                          position: 'absolute',
-                          top: '-8px',
-                          right: '-8px',
-                          background: getTierColor(parseFloat(rating)),
+                          background: getTierColor(tierData.avgRating),
                           color: '#fff',
                           borderRadius: '50%',
-                          width: '24px',
-                          height: '24px',
+                          width: '28px',
+                          height: '28px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '0.8rem',
+                          fontSize: '0.9rem',
                           fontWeight: 'bold',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                         }}>
-                          {game.studentRating}
+                          #{game.rank}
                         </div>
-                      </a>
+                        
+                        {/* Game Thumbnail */}
+                        <a
+                          href={`https://boardgamegeek.com${game.URL}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`#${game.rank} - ${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
+                          style={{
+                            display: 'block',
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            border: `3px solid ${getTierColor(tierData.avgRating)}`,
+                            position: 'relative'
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                          }}
+                        >
+                          <img
+                            src={game.Thumbnail}
+                            alt={game.Name}
+                            style={{
+                              width: 90,
+                              height: 90,
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                          />
+                          {/* Rating Badge */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            background: getTierColor(tierData.avgRating),
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                          }}>
+                            {game.studentRating}
+                          </div>
+                        </a>
+                        
+                        {/* Game Name */}
+                        <div style={{
+                          fontSize: '0.8rem',
+                          color: '#64748b',
+                          textAlign: 'center',
+                          maxWidth: '90px',
+                          lineHeight: '1.2',
+                          fontWeight: 500
+                        }}>
+                          {game.Name.length > 20 ? game.Name.substring(0, 20) + '...' : game.Name}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

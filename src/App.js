@@ -293,7 +293,16 @@ function App() {
   if (games.length === 0) return <div>No games found.</div>;
   
   if (showStatistics) {
-    return <StatisticsPage onBack={() => setShowStatistics(false)} playedGames={playedRef.current} />;
+    return (
+      <StatisticsPage 
+        onBack={() => setShowStatistics(false)} 
+        playedGames={playedRef.current}
+        onRatingChange={(gameId, newRating) => {
+          playedRef.current[gameId] = newRating;
+          forceUpdate(u => u + 1); // Force a re-render to sync state
+        }}
+      />
+    );
   }
   
   const game = games[current];

@@ -1,10 +1,20 @@
 import { useEffect, useState, useRef } from 'react';
 import Papa from 'papaparse';
 import html2canvas from 'html2canvas';
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  pointerWithin,
+  DragStartEvent,
+  DragEndEvent
+} from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
-const StatisticsPage = ({ onBack, playedGames }) => {
+const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
   const [studentTiers, setStudentTiers] = useState({});
   const [loading, setLoading] = useState(true);
   const [isExportingImage, setIsExportingImage] = useState(false);
@@ -15,6 +25,8 @@ const StatisticsPage = ({ onBack, playedGames }) => {
     averageRating: 0,
     topRating: 0
   });
+  const [activeGame, setActiveGame] = useState(null);
+  const [dragOverTier, setDragOverTier] = useState(null);
 
   useEffect(() => {
     fetch(CSV_URL)
@@ -119,6 +131,324 @@ const StatisticsPage = ({ onBack, playedGames }) => {
     if (rating >= 6) return '#f59e0b'; // Orange for 6-6.9
     if (rating >= 5) return '#ef4444'; // Red for 5-5.9
     return '#6b7280'; // Gray for below 5
+  };
+
+  // Drag and drop functions
+  const handleDragStart = (event) => {
+    const { active } = event;
+    const gameId = active.id;
+    
+    // Find the game being dragged
+    for (const tierData of Object.values(studentTiers)) {
+      const draggedGame = tierData.games.find(game => game.ID === gameId);
+      if (draggedGame) {
+        setActiveGame(draggedGame);
+        break;
+      }
+    }
+  };
+
+  const handleDragOver = (event) => {
+    const { over } = event;
+    if (over && over.id.startsWith('tier-')) {
+      const tierKey = over.id.replace('tier-', '');
+      setDragOverTier(tierKey);
+    } else {
+      setDragOverTier(null);
+    }
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveGame(null);
+    setDragOverTier(null);
+
+    if (!over) return;
+
+    const gameId = active.id;
+    const overId = over.id;
+
+    // Handle dropping on a tier
+    if (overId.startsWith('tier-')) {
+      const newTierKey = overId.replace('tier-', '');
+      moveGameToTier(gameId, newTierKey);
+    }
+  };
+
+  const moveGameToTier = (gameId, targetTierKey) => {
+    // Find which tier the game is currently in
+    let sourceGame = null;
+    let sourceTierKey = null;
+    
+    for (const [tierKey, tierData] of Object.entries(studentTiers)) {
+      const gameIndex = tierData.games.findIndex(game => game.ID === gameId);
+      if (gameIndex !== -1) {
+        sourceGame = tierData.games[gameIndex];
+        sourceTierKey = tierKey;
+        break;
+      }
+    }
+
+    if (!sourceGame || sourceTierKey === targetTierKey) return;
+
+    // Get the target tier's rating range
+    const targetTier = studentTiers[targetTierKey];
+    if (!targetTier) return;
+
+    // Calculate new rating based on tier
+    const tierRanges = [
+      { key: '10.0', min: 10, max: 10 },
+      { key: '9.5+', min: 9.5, max: 9.9 },
+      { key: '9+', min: 9.0, max: 9.4 },
+      { key: '8.5+', min: 8.5, max: 8.9 },
+      { key: '8+', min: 8.0, max: 8.4 },
+      { key: '7.5+', min: 7.5, max: 7.9 },
+      { key: '7+', min: 7.0, max: 7.4 },
+      { key: '6.5+', min: 6.5, max: 6.9 },
+      { key: '6+', min: 6.0, max: 6.4 },
+      { key: '5.5+', min: 5.5, max: 5.9 },
+      { key: '5+', min: 5.0, max: 5.4 },
+      { key: '4.5+', min: 4.5, max: 4.9 },
+      { key: '4+', min: 4.0, max: 4.4 },
+      { key: '3.5+', min: 3.5, max: 3.9 },
+      { key: '3+', min: 3.0, max: 3.4 },
+      { key: '<3', min: 0, max: 2.9 }
+    ];
+
+    const targetRange = tierRanges.find(range => range.key === targetTierKey);
+    if (!targetRange) return;
+
+    // Set new rating to the middle of the target tier range
+    const newRating = targetRange.min + (targetRange.max - targetRange.min) / 2;
+    const roundedRating = Math.round(newRating * 10) / 10; // Round to 1 decimal place
+
+    // Update the game's rating
+    sourceGame.studentRating = roundedRating;
+
+    // Update local state
+    setStudentTiers(prevTiers => {
+      const newTiers = { ...prevTiers };
+      
+      // Remove game from source tier
+      newTiers[sourceTierKey] = {
+        ...newTiers[sourceTierKey],
+        games: newTiers[sourceTierKey].games.filter(game => game.ID !== gameId)
+      };
+      
+      // Add game to target tier
+      if (!newTiers[targetTierKey]) {
+        const targetRange = tierRanges.find(range => range.key === targetTierKey);
+        newTiers[targetTierKey] = {
+          label: targetRange.label,
+          range: targetTierKey,
+          games: [],
+          avgRating: targetRange.min + (targetRange.max - targetRange.min) / 2
+        };
+      }
+      
+      newTiers[targetTierKey] = {
+        ...newTiers[targetTierKey],
+        games: [...newTiers[targetTierKey].games, sourceGame]
+      };
+
+      // Remove empty tiers
+      Object.keys(newTiers).forEach(key => {
+        if (newTiers[key].games.length === 0) {
+          delete newTiers[key];
+        }
+      });
+
+      return newTiers;
+    });
+
+    // Call the callback to update the main rating system
+    if (onRatingChange) {
+      onRatingChange(gameId, roundedRating);
+    }
+  };
+
+  // Draggable Game Component
+  const DraggableGame = ({ game }) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: game.ID,
+    });
+
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      opacity: isDragging ? 0.5 : 1,
+      zIndex: isDragging ? 1000 : 'auto',
+    } : undefined;
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+      >
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: 'transform 0.2s',
+          transform: isDragging ? 'scale(1.05)' : 'scale(1)'
+        }}>
+          {/* Game Thumbnail */}
+          <a
+            href={`https://boardgamegeek.com${game.URL}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
+            style={{
+              display: 'block',
+              borderRadius: 12,
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              pointerEvents: isDragging ? 'none' : 'auto'
+            }}
+            onMouseOver={e => {
+              if (!isDragging) {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+              }
+            }}
+            onMouseOut={e => {
+              if (!isDragging) {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+              }
+            }}
+          >
+            <img
+              src={game.Thumbnail}
+              alt={game.Name}
+              style={{
+                width: 90,
+                height: 90,
+                objectFit: 'cover',
+                display: 'block'
+              }}
+              draggable={false}
+            />
+          </a>
+          
+          {/* Game Name */}
+          <div style={{
+            fontSize: '0.8rem',
+            color: '#64748b',
+            textAlign: 'center',
+            maxWidth: '90px',
+            lineHeight: '1.2',
+            fontWeight: 500
+          }}>
+            {game.Name.length > 20 ? game.Name.substring(0, 20) + '...' : game.Name}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Droppable Tier Component
+  const DroppableTier = ({ tierKey, tierData, children }) => {
+    const { isOver, setNodeRef } = useDroppable({
+      id: `tier-${tierKey}`,
+    });
+
+    const isHighlighted = dragOverTier === tierKey || isOver;
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          background: '#fff',
+          borderRadius: 20,
+          boxShadow: isHighlighted 
+            ? '0 12px 40px rgba(99,102,241,0.3)' 
+            : '0 8px 32px rgba(0,0,0,0.1)',
+          border: isHighlighted 
+            ? '2px solid #6366f1' 
+            : '1px solid #e0e7ff',
+          overflow: 'hidden',
+          transition: 'box-shadow 0.3s, border 0.3s'
+        }}
+      >
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '250px 1fr',
+          alignItems: 'center',
+          minHeight: '140px'
+        }}>
+          {/* Tier Label */}
+          <div style={{
+            background: getTierColor(tierData.avgRating),
+            color: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            minHeight: '140px',
+            padding: '1rem',
+            position: 'relative'
+          }}>
+            {isHighlighted && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem'
+              }}>
+                📥
+              </div>
+            )}
+            <div style={{
+              fontSize: '1.8rem',
+              fontWeight: 'bold',
+              marginBottom: '0.5rem'
+            }}>
+              {tierData.label}
+            </div>
+            <div style={{
+              fontSize: '1.4rem',
+              fontWeight: 600,
+              textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              marginBottom: '0.25rem'
+            }}>
+              {tierData.range}
+            </div>
+            <div style={{
+              fontSize: '0.9rem',
+              opacity: 0.9
+            }}>
+              {tierData.games.length} game{tierData.games.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {/* Games with Rankings */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '16px',
+            padding: '1.5rem',
+            alignItems: 'flex-start',
+            minHeight: '140px',
+            background: isHighlighted ? 'rgba(99,102,241,0.05)' : 'transparent',
+            transition: 'background 0.3s'
+          }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    );
   };
 
 
@@ -676,144 +1006,104 @@ const StatisticsPage = ({ onBack, playedGames }) => {
       </div>
 
       {/* Tier List */}
-      <div ref={tierListRef} style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {!hasRatedGames ? (
-          <div style={{
-            background: '#fff',
-            borderRadius: 20,
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-            border: '1px solid #e0e7ff'
-          }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎲</div>
-            <h2 style={{ color: '#64748b', fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-              No Games Rated Yet
-            </h2>
-            <p style={{ color: '#9ca3af', fontSize: '1.1rem' }}>
-              Start rating some games to see your personalized tier list here!
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {Object.entries(studentTiers).map(([tierKey, tierData]) => (
-              <div key={tierKey} style={{
-                background: '#fff',
-                borderRadius: 20,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+      <DndContext
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        collisionDetection={pointerWithin}
+      >
+        <div ref={tierListRef} style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {!hasRatedGames ? (
+            <div style={{
+              background: '#fff',
+              borderRadius: 20,
+              padding: '4rem 2rem',
+              textAlign: 'center',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              border: '1px solid #e0e7ff'
+            }}>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎲</div>
+              <h2 style={{ color: '#64748b', fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
+                No Games Rated Yet
+              </h2>
+              <p style={{ color: '#9ca3af', fontSize: '1.1rem' }}>
+                Start rating some games to see your personalized tier list here!
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Help text */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: 16,
+                padding: '1rem 1.5rem',
+                marginBottom: '1.5rem',
                 border: '1px solid #e0e7ff',
-                overflow: 'hidden'
+                textAlign: 'center',
+                color: '#64748b',
+                fontSize: '1rem'
               }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '250px 1fr',
-                  alignItems: 'center',
-                  minHeight: '140px'
-                }}>
-                  {/* Tier Label */}
-                  <div style={{
-                    background: getTierColor(tierData.avgRating),
-                    color: '#fff',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    minHeight: '140px',
-                    padding: '1rem'
-                  }}>
-                    <div style={{
-                      fontSize: '1.8rem',
-                      fontWeight: 'bold',
-                      marginBottom: '0.5rem'
-                    }}>
-                      {tierData.label}
-                    </div>
-                    <div style={{
-                      fontSize: '1.4rem',
-                      fontWeight: 600,
-                      textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      marginBottom: '0.25rem'
-                    }}>
-                      {tierData.range}
-                    </div>
-                    <div style={{
-                      fontSize: '0.9rem',
-                      opacity: 0.9
-                    }}>
-                      {tierData.games.length} game{tierData.games.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-
-                  {/* Games with Rankings */}
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '16px',
-                    padding: '1.5rem',
-                    alignItems: 'flex-start'
-                  }}>
-                    {tierData.games.map(game => (
-                      <div key={game.ID} style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        {/* Game Thumbnail */}
-                        <a
-                          href={`https://boardgamegeek.com${game.URL}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={`${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
-                          style={{
-                            display: 'block',
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                            transition: 'transform 0.2s, box-shadow 0.2s'
-                          }}
-                          onMouseOver={e => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                          }}
-                        >
-                          <img
-                            src={game.Thumbnail}
-                            alt={game.Name}
-                            style={{
-                              width: 90,
-                              height: 90,
-                              objectFit: 'cover',
-                              display: 'block'
-                            }}
-                          />
-                        </a>
-                        
-                        {/* Game Name */}
-                        <div style={{
-                          fontSize: '0.8rem',
-                          color: '#64748b',
-                          textAlign: 'center',
-                          maxWidth: '90px',
-                          lineHeight: '1.2',
-                          fontWeight: 500
-                        }}>
-                          {game.Name.length > 20 ? game.Name.substring(0, 20) + '...' : game.Name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                💡 <strong>Tip:</strong> Drag games between tiers to change their ratings! Moving a game will automatically update its numeric rating to match the new tier.
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {Object.entries(studentTiers).map(([tierKey, tierData]) => (
+                  <DroppableTier key={tierKey} tierKey={tierKey} tierData={tierData}>
+                    {tierData.games.map(game => (
+                      <DraggableGame key={game.ID} game={game} />
+                    ))}
+                  </DroppableTier>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <DragOverlay>
+          {activeGame ? (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '8px',
+              transform: 'rotate(5deg)',
+              opacity: 0.9
+            }}>
+              <div style={{
+                borderRadius: 12,
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                border: '2px solid #6366f1'
+              }}>
+                <img
+                  src={activeGame.Thumbnail}
+                  alt={activeGame.Name}
+                  style={{
+                    width: 90,
+                    height: 90,
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </div>
+              <div style={{
+                fontSize: '0.8rem',
+                color: '#6366f1',
+                textAlign: 'center',
+                maxWidth: '90px',
+                lineHeight: '1.2',
+                fontWeight: 600,
+                background: '#fff',
+                padding: '4px 8px',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}>
+                {activeGame.Name.length > 20 ? activeGame.Name.substring(0, 20) + '...' : activeGame.Name}
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 };

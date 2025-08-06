@@ -13,6 +13,9 @@ function App() {
   const [, forceUpdate] = useState(0); // dummy state to force re-render
   const [loading, setLoading] = useState(true);
   const [showStatistics, setShowStatistics] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Load CSV on mount
   useEffect(() => {
@@ -101,10 +104,78 @@ function App() {
     }
   }, [current, games, loading, rating]);
 
+  // Search functionality
+  const handleSearch = useCallback((query) => {
+    if (!query.trim() || games.length === 0) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const normalizedQuery = query.toLowerCase().trim();
+    const results = games
+      .map((game, index) => ({
+        ...game,
+        index,
+        score: getSearchScore(game, normalizedQuery)
+      }))
+      .filter(game => game.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8); // Show top 8 results
+
+    setSearchResults(results);
+    setShowSearchResults(results.length > 0);
+  }, [games]);
+
+  const getSearchScore = (game, query) => {
+    const name = game.Name.toLowerCase();
+    const year = game.Year?.toString() || '';
+    
+    // Exact match gets highest score
+    if (name === query) return 100;
+    
+    // Starts with query gets high score
+    if (name.startsWith(query)) return 90;
+    
+    // Contains query gets medium score
+    if (name.includes(query)) return 70;
+    
+    // Year match gets medium score
+    if (year === query) return 60;
+    
+    // Fuzzy match - check if all characters of query appear in order
+    let queryIndex = 0;
+    for (let i = 0; i < name.length && queryIndex < query.length; i++) {
+      if (name[i] === query[queryIndex]) {
+        queryIndex++;
+      }
+    }
+    if (queryIndex === query.length) return 40;
+    
+    return 0;
+  };
+
+  const jumpToGame = (gameIndex) => {
+    setCurrent(gameIndex);
+    setRating('');
+    setSearchQuery('');
+    setShowSearchResults(false);
+    forceUpdate(u => u + 1);
+  };
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  // Handle search input changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300); // Debounce search
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, handleSearch]);
 
 
   // Preload images with priority loading for next/previous
@@ -269,6 +340,127 @@ function App() {
                 transition: 'background 0.2s, color 0.2s'
               }}>Upload CSV</span>
             </label>
+          </div>
+
+          {/* Search functionality */}
+          <div style={{ marginBottom: 16, position: 'relative' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              justifyContent: 'center',
+              marginBottom: '8px'
+            }}>
+              <span style={{ fontWeight: 500, color: '#6366f1' }}>🔍 Quick Search:</span>
+              <input
+                type="text"
+                placeholder="Type game name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: 6,
+                  border: '1px solid #6366f1',
+                  fontSize: '0.9rem',
+                  width: '200px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#4f46e5';
+                  e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#6366f1';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#fff',
+                borderRadius: 12,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                border: '1px solid #e0e7ff',
+                zIndex: 1000,
+                maxHeight: '300px',
+                overflowY: 'auto',
+                width: '320px'
+              }}>
+                {searchResults.map((game, index) => (
+                  <div
+                    key={game.ID}
+                    onClick={() => jumpToGame(game.index)}
+                    style={{
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      borderBottom: index < searchResults.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      transition: 'background 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}
+                    onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                    onMouseOut={(e) => e.target.style.background = 'transparent'}
+                  >
+                    <img
+                      src={game.Thumbnail}
+                      alt={game.Name}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 6,
+                        objectFit: 'cover',
+                        flexShrink: 0
+                      }}
+                    />
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <div style={{
+                        fontWeight: 600,
+                        color: '#2d3748',
+                        fontSize: '0.9rem',
+                        marginBottom: '2px'
+                      }}>
+                        {game.Name}
+                      </div>
+                      <div style={{
+                        color: '#64748b',
+                        fontSize: '0.8rem'
+                      }}>
+                        {game.Year} • #{game.index + 1} of {games.length}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: playedRef.current[game.ID] === false 
+                        ? '#f59e42' 
+                        : playedRef.current[game.ID] === true 
+                          ? '#10b981' 
+                          : typeof playedRef.current[game.ID] === 'number' 
+                            ? '#6366f1' 
+                            : '#9ca3af',
+                      fontWeight: 500
+                    }}>
+                      {playedRef.current[game.ID] === false
+                        ? 'Unplayed'
+                        : typeof playedRef.current[game.ID] === 'number'
+                          ? `★ ${playedRef.current[game.ID]}`
+                          : playedRef.current[game.ID] === true
+                            ? 'Played'
+                            : '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <h1 style={{
             fontSize: '2.2rem',

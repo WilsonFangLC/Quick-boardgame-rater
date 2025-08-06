@@ -12,10 +12,12 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { arrayToCsv, downloadCsv } from './csvUtils';
+import { useTranslation } from './translations';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
 const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
+  const { t } = useTranslation();
   const [studentTiers, setStudentTiers] = useState({});
   const [loading, setLoading] = useState(true);
   const [isExportingImage, setIsExportingImage] = useState(false);
@@ -59,22 +61,22 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
 
     // Group games by tier ranges for better organization
     const tierRanges = [
-      { min: 10, max: 10, label: 'S+ Tier', key: '10.0' },
-      { min: 9.5, max: 9.9, label: 'S Tier', key: '9.5+' },
-      { min: 9.0, max: 9.4, label: 'S- Tier', key: '9+' },
-      { min: 8.5, max: 8.9, label: 'A+ Tier', key: '8.5+' },
-      { min: 8.0, max: 8.4, label: 'A Tier', key: '8+' },
-      { min: 7.5, max: 7.9, label: 'A- Tier', key: '7.5+' },
-      { min: 7.0, max: 7.4, label: 'B+ Tier', key: '7+' },
-      { min: 6.5, max: 6.9, label: 'B Tier', key: '6.5+' },
-      { min: 6.0, max: 6.4, label: 'B- Tier', key: '6+' },
-      { min: 5.5, max: 5.9, label: 'C+ Tier', key: '5.5+' },
-      { min: 5.0, max: 5.4, label: 'C Tier', key: '5+' },
-      { min: 4.5, max: 4.9, label: 'C- Tier', key: '4.5+' },
-      { min: 4.0, max: 4.4, label: 'D+ Tier', key: '4+' },
-      { min: 3.5, max: 3.9, label: 'D Tier', key: '3.5+' },
-      { min: 3.0, max: 3.4, label: 'D- Tier', key: '3+' },
-      { min: 0, max: 2.9, label: 'F Tier', key: '<3' }
+      { min: 10, max: 10, label: t('tierSPlus'), key: '10.0' },
+      { min: 9.5, max: 9.9, label: t('tierS'), key: '9.5+' },
+      { min: 9.0, max: 9.4, label: t('tierSMinus'), key: '9+' },
+      { min: 8.5, max: 8.9, label: t('tierAPlus'), key: '8.5+' },
+      { min: 8.0, max: 8.4, label: t('tierA'), key: '8+' },
+      { min: 7.5, max: 7.9, label: t('tierAMinus'), key: '7.5+' },
+      { min: 7.0, max: 7.4, label: t('tierBPlus'), key: '7+' },
+      { min: 6.5, max: 6.9, label: t('tierB'), key: '6.5+' },
+      { min: 6.0, max: 6.4, label: t('tierBMinus'), key: '6+' },
+      { min: 5.5, max: 5.9, label: t('tierCPlus'), key: '5.5+' },
+      { min: 5.0, max: 5.4, label: t('tierC'), key: '5+' },
+      { min: 4.5, max: 4.9, label: t('tierCMinus'), key: '4.5+' },
+      { min: 4.0, max: 4.4, label: t('tierDPlus'), key: '4+' },
+      { min: 3.5, max: 3.9, label: t('tierD'), key: '3.5+' },
+      { min: 3.0, max: 3.4, label: t('tierDMinus'), key: '3+' },
+      { min: 0, max: 2.9, label: t('tierF'), key: '<3' }
     ];
 
     const groupedByTier = {};
@@ -198,22 +200,22 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
 
     // Calculate new rating based on tier
     const tierRanges = [
-      { key: '10.0', min: 10, max: 10 },
-      { key: '9.5+', min: 9.5, max: 9.9 },
-      { key: '9+', min: 9.0, max: 9.4 },
-      { key: '8.5+', min: 8.5, max: 8.9 },
-      { key: '8+', min: 8.0, max: 8.4 },
-      { key: '7.5+', min: 7.5, max: 7.9 },
-      { key: '7+', min: 7.0, max: 7.4 },
-      { key: '6.5+', min: 6.5, max: 6.9 },
-      { key: '6+', min: 6.0, max: 6.4 },
-      { key: '5.5+', min: 5.5, max: 5.9 },
-      { key: '5+', min: 5.0, max: 5.4 },
-      { key: '4.5+', min: 4.5, max: 4.9 },
-      { key: '4+', min: 4.0, max: 4.4 },
-      { key: '3.5+', min: 3.5, max: 3.9 },
-      { key: '3+', min: 3.0, max: 3.4 },
-      { key: '<3', min: 0, max: 2.9 }
+      { key: '10.0', min: 10, max: 10, label: t('tierSPlus') },
+      { key: '9.5+', min: 9.5, max: 9.9, label: t('tierS') },
+      { key: '9+', min: 9.0, max: 9.4, label: t('tierSMinus') },
+      { key: '8.5+', min: 8.5, max: 8.9, label: t('tierAPlus') },
+      { key: '8+', min: 8.0, max: 8.4, label: t('tierA') },
+      { key: '7.5+', min: 7.5, max: 7.9, label: t('tierAMinus') },
+      { key: '7+', min: 7.0, max: 7.4, label: t('tierBPlus') },
+      { key: '6.5+', min: 6.5, max: 6.9, label: t('tierB') },
+      { key: '6+', min: 6.0, max: 6.4, label: t('tierBMinus') },
+      { key: '5.5+', min: 5.5, max: 5.9, label: t('tierCPlus') },
+      { key: '5+', min: 5.0, max: 5.4, label: t('tierC') },
+      { key: '4.5+', min: 4.5, max: 4.9, label: t('tierCMinus') },
+      { key: '4+', min: 4.0, max: 4.4, label: t('tierDPlus') },
+      { key: '3.5+', min: 3.5, max: 3.9, label: t('tierD') },
+      { key: '3+', min: 3.0, max: 3.4, label: t('tierDMinus') },
+      { key: '<3', min: 0, max: 2.9, label: t('tierF') }
     ];
 
     const targetRange = tierRanges.find(range => range.key === targetTierKey);
@@ -434,7 +436,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
               fontSize: '0.9rem',
               opacity: 0.9
             }}>
-              {tierData.games.length} game{tierData.games.length !== 1 ? 's' : ''}
+              {tierData.games.length} {tierData.games.length === 1 ? t('game') : t('games')}
             </div>
           </div>
 
@@ -468,7 +470,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
         alignItems: 'center',
         fontFamily: 'Segoe UI, Arial, sans-serif'
       }}>
-        <div style={{ fontSize: '1.2rem', color: '#6366f1' }}>Loading statistics...</div>
+        <div style={{ fontSize: '1.2rem', color: '#6366f1' }}>{t('loadingStatistics')}</div>
       </div>
     );
   }
@@ -478,7 +480,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
   // Export functions
   const exportToCSV = () => {
     if (!hasRatedGames) {
-      alert('No rated games to export!');
+      alert(t('noRatedGamesToExport'));
       return;
     }
 
@@ -511,7 +513,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
 
   const exportToJSON = () => {
     if (!hasRatedGames) {
-      alert('No rated games to export!');
+      alert(t('noRatedGamesToExport'));
       return;
     }
 
@@ -554,7 +556,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
 
   const exportTierListImage = async () => {
     if (!hasRatedGames) {
-      alert('No rated games to export!');
+      alert(t('noRatedGamesToExport'));
       return;
     }
 
@@ -814,7 +816,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
           e.target.style.transform = 'translateY(0)';
           e.target.style.boxShadow = '0 4px 16px rgba(99,102,241,0.2)';
         }}>
-          ← Back to Tracker
+          {t('backToTracker')}
         </button>
 
         <h1 style={{
@@ -825,7 +827,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
           marginBottom: '1rem',
           textShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          📊 Rating Statistics
+          {t('ratingStatistics')}
         </h1>
 
         {/* Statistics Summary */}
@@ -846,7 +848,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#6366f1', marginBottom: '0.5rem' }}>
               {stats.totalRated}
             </div>
-            <div style={{ color: '#64748b', fontWeight: 600 }}>Games Rated</div>
+            <div style={{ color: '#64748b', fontWeight: 600 }}>{t('gamesRated')}</div>
           </div>
           
           <div style={{
@@ -860,7 +862,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', marginBottom: '0.5rem' }}>
               {stats.totalPlayed}
             </div>
-            <div style={{ color: '#64748b', fontWeight: 600 }}>Games Played</div>
+            <div style={{ color: '#64748b', fontWeight: 600 }}>{t('gamesPlayed')}</div>
           </div>
 
           <div style={{
@@ -874,7 +876,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f59e0b', marginBottom: '0.5rem' }}>
               {stats.averageRating}
             </div>
-            <div style={{ color: '#64748b', fontWeight: 600 }}>Average Rating</div>
+            <div style={{ color: '#64748b', fontWeight: 600 }}>{t('averageRating')}</div>
           </div>
 
           <div style={{
@@ -888,7 +890,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '0.5rem' }}>
               {stats.topRating}
             </div>
-            <div style={{ color: '#64748b', fontWeight: 600 }}>Highest Rating</div>
+            <div style={{ color: '#64748b', fontWeight: 600 }}>{t('highestRating')}</div>
           </div>
         </div>
 
@@ -926,7 +928,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
                 e.target.style.boxShadow = '0 4px 16px rgba(16,185,129,0.2)';
               }}
             >
-              📊 Export CSV
+              {t('exportCSV')}
             </button>
 
             <button
@@ -955,7 +957,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
                 e.target.style.boxShadow = '0 4px 16px rgba(59,130,246,0.2)';
               }}
             >
-              📋 Export JSON
+              {t('exportJSON')}
             </button>
 
             <button
@@ -990,7 +992,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
                 }
               }}
             >
-              {isExportingImage ? '⏳ Generating...' : '🖼️ Export Image'}
+              {isExportingImage ? t('exporting') : t('exportImage')}
             </button>
           </div>
         )}
@@ -1016,10 +1018,10 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             }}>
               <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎲</div>
               <h2 style={{ color: '#64748b', fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-                No Games Rated Yet
+                {t('noGamesRatedYet')}
               </h2>
               <p style={{ color: '#9ca3af', fontSize: '1.1rem' }}>
-                Start rating some games to see your personalized tier list here!
+                {t('noGamesRatedDescription')}
               </p>
             </div>
           ) : (
@@ -1035,7 +1037,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
                 color: '#64748b',
                 fontSize: '1rem'
               }}>
-                💡 <strong>Tip:</strong> Drag games between tiers to change their ratings! Moving a game will automatically update its numeric rating to match the new tier.
+                {t('dragDropTip')}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1106,8 +1108,8 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
         marginTop: '2rem',
         paddingBottom: '1rem'
       }}>
-        <div>Boardgame Rating Statistics &copy; {new Date().getFullYear()}</div>
-        <div style={{marginTop: 4}}>Developed by <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
+        <div>{t('statisticsCopyright')} &copy; {new Date().getFullYear()}</div>
+        <div style={{marginTop: 4}}>{t('developedBy')} <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
       </div>
     </div>
   );

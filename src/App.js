@@ -3,10 +3,12 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import StatisticsPage from './StatisticsPage';
 import { arrayToCsv, downloadCsv } from './csvUtils';
+import { useTranslation } from './translations';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
 function App() {
+  const { t, toggleLanguage, language } = useTranslation();
   const [games, setGames] = useState([]);
   const [current, setCurrent] = useState(0);
   const playedRef = useRef({}); // { id: true/false or rating number }
@@ -290,8 +292,8 @@ function App() {
     }
   }, [games, current, preloadedImages]);
 
-  if (loading) return <div>Loading games...</div>;
-  if (games.length === 0) return <div>No games found.</div>;
+  if (loading) return <div>{t('loading')}</div>;
+  if (games.length === 0) return <div>{t('noGamesFound')}</div>;
   
   if (showStatistics) {
     return (
@@ -333,10 +335,28 @@ function App() {
           position: 'relative',
           transition: 'box-shadow 0.2s',
         }}>
-          {/* Upload button for recovering progress */}
-          <div style={{ marginBottom: 16 }}>
+          {/* Language Toggle and Upload button */}
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <button
+              onClick={toggleLanguage}
+              style={{
+                background: '#8b5cf6',
+                color: '#fff',
+                padding: '0.3rem 0.8rem',
+                borderRadius: 6,
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onMouseOver={e => e.target.style.background = '#7c3aed'}
+              onMouseOut={e => e.target.style.background = '#8b5cf6'}
+            >
+              {language === 'en' ? '中文' : 'English'}
+            </button>
             <label style={{ fontWeight: 500, color: '#6366f1', cursor: 'pointer' }}>
-              <span style={{ marginRight: 8 }}>Recover Progress:</span>
+              <span style={{ marginRight: 8 }}>{t('recoverProgress')}</span>
               <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleUpload} />
               <span style={{
                 background: '#e0e7ff',
@@ -348,7 +368,7 @@ function App() {
                 border: '1px solid #6366f1',
                 cursor: 'pointer',
                 transition: 'background 0.2s, color 0.2s'
-              }}>Upload CSV</span>
+              }}>{t('uploadCSV')}</span>
             </label>
           </div>
 
@@ -361,10 +381,10 @@ function App() {
               justifyContent: 'center',
               marginBottom: '8px'
             }}>
-              <span style={{ fontWeight: 500, color: '#6366f1' }}>🔍 Quick Search:</span>
+              <span style={{ fontWeight: 500, color: '#6366f1' }}>{t('quickSearch')}</span>
               <input
                 type="text"
-                placeholder="Type game name..."
+                placeholder={t('searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
@@ -452,11 +472,11 @@ function App() {
                       fontWeight: 500
                     }}>
                       {playedRef.current[game.ID] === false
-                        ? 'Unplayed'
+                        ? t('unplayed')
                         : typeof playedRef.current[game.ID] === 'number'
                           ? `★ ${playedRef.current[game.ID]}`
                           : playedRef.current[game.ID] === true
-                            ? 'Played'
+                            ? t('played')
                             : '—'}
                     </div>
                   </div>
@@ -557,7 +577,7 @@ function App() {
             marginBottom: 18,
             display: 'inline-block',
             transition: 'color 0.2s',
-          }}>View on BGG</a>
+          }}>{t('viewOnBGG')}</a>
           <div style={{
             margin: '18px 0 10px 0',
             fontSize: '1.1rem',
@@ -566,7 +586,7 @@ function App() {
             flexDirection: 'column',
             alignItems: 'center',
           }}>
-            <b style={{marginBottom: 8}}>Type your rating (1-10):</b>
+            <b style={{marginBottom: 8}}>{t('typeRating')}</b>
             <div style={{
               minHeight: 80,
               minWidth: 120,
@@ -590,8 +610,28 @@ function App() {
                 opacity: rating ? 1 : 0.5
               }}>{rating ? rating : '—'}</span>
             </div>
-            <div style={{marginTop: 10, color: '#64748b', fontSize: '0.98rem'}}>
-              <b>Type a number, press <span style={{color:'#10b981'}}>Enter</span> for played, <span style={{color:'#f59e42'}}>Backspace</span> for unplayed.</b>
+            <div style={{marginTop: 10, color: '#64748b', fontSize: '0.98rem', textAlign: 'center', lineHeight: '1.4'}}>
+              <b>{t('ratingInstructions').split('\n').map((line, index) => (
+                <div key={index}>
+                  {line.includes('Backspace') || line.includes('退格键') ? (
+                    <>
+                      {line.split(line.includes('Backspace') ? 'Backspace' : '退格键')[0]}
+                      <span style={{color:'#f59e42', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>
+                        {line.includes('Backspace') ? 'Backspace' : '退格键'}
+                      </span>
+                      {line.split(line.includes('Backspace') ? 'Backspace' : '退格键')[1]}
+                    </>
+                  ) : line.includes('Enter') || line.includes('回车键') ? (
+                    <>
+                      {line.split(line.includes('Enter') ? 'Enter' : '回车键')[0]}
+                      <span style={{color:'#10b981', backgroundColor: '#d1fae5', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>
+                        {line.includes('Enter') ? 'Enter' : '回车键'}
+                      </span>
+                      {line.split(line.includes('Enter') ? 'Enter' : '回车键')[1]}
+                    </>
+                  ) : line}
+                </div>
+              ))}</b>
             </div>
             <div style={{
               display: 'flex',
@@ -614,7 +654,7 @@ function App() {
                   fontSize: '0.9rem',
                   textAlign: 'center'
                 }}
-                placeholder="Jump to"
+                placeholder={t('jumpToPlaceholder')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const num = parseInt(e.target.value);
@@ -625,7 +665,7 @@ function App() {
                       // Return focus to document body for rating input
                       document.body.focus();
                     } else {
-                      alert(`Please enter a number between 1 and ${games.length}`);
+                      alert(`${t('jumpToError')}${games.length}`);
                     }
                     e.preventDefault(); // Prevent form submission
                   }
@@ -641,12 +681,12 @@ function App() {
             fontWeight: 500
           }}>
             {playedRef.current[game.ID] === false
-              ? 'Unplayed'
+              ? t('unplayed')
               : typeof playedRef.current[game.ID] === 'number'
-                ? `Played, Your rating: ${playedRef.current[game.ID]}`
+                ? `${t('playedRating')}${playedRef.current[game.ID]}`
                 : playedRef.current[game.ID] === true
-                  ? 'Played'
-                  : 'Not answered'}
+                  ? t('played')
+                  : t('notAnswered')}
           </div>
           <div style={{
             display: 'flex',
@@ -672,7 +712,7 @@ function App() {
               cursor: current === 0 ? 'not-allowed' : 'pointer',
               boxShadow: '0 2px 8px 0 rgba(99,102,241,0.08)',
               transition: 'background 0.2s, color 0.2s'
-            }}>Back</button>
+            }}>{t('back')}</button>
             <button onClick={() => {
               setRating('');
               setCurrent(c => {
@@ -691,7 +731,7 @@ function App() {
               cursor: current === games.length - 1 ? 'not-allowed' : 'pointer',
               boxShadow: '0 2px 8px 0 rgba(99,102,241,0.08)',
               transition: 'background 0.2s, color 0.2s'
-            }}>Next</button>
+            }}>{t('next')}</button>
             <button onClick={() => {
               // Export results as CSV with proper escaping
               const rows = games.map(g => ({
@@ -718,7 +758,7 @@ function App() {
               cursor: 'pointer',
               boxShadow: '0 2px 8px 0 rgba(16,185,129,0.08)',
               transition: 'background 0.2s, color 0.2s'
-            }}>Export Results</button>
+            }}>{t('exportResults')}</button>
             <button onClick={() => setShowStatistics(true)} style={{
               padding: '0.5rem 1.2rem',
               borderRadius: 8,
@@ -730,12 +770,12 @@ function App() {
               cursor: 'pointer',
               boxShadow: '0 2px 8px 0 rgba(139,92,246,0.08)',
               transition: 'background 0.2s, color 0.2s'
-            }}>View Statistics</button>
+            }}>{t('viewStatistics')}</button>
           </div>
         </div>
         <div style={{color:'#a1a1aa', fontSize:'0.95rem', marginTop:8, textAlign: 'center'}}>
-          <div>Boardgame Played Tracker &copy; {new Date().getFullYear()}</div>
-          <div style={{marginTop: 4}}>Developed by <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
+          <div>{t('copyright')} &copy; {new Date().getFullYear()}</div>
+          <div style={{marginTop: 4}}>{t('developedBy')} <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
         </div>
       </div>
     </>

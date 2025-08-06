@@ -733,8 +733,9 @@ function App() {
             }}>View Statistics</button>
           </div>
         </div>
-        <div style={{color:'#a1a1aa', fontSize:'0.95rem', marginTop:8}}>
-          <span>Boardgame Played Tracker &copy; {new Date().getFullYear()}</span>
+        <div style={{color:'#a1a1aa', fontSize:'0.95rem', marginTop:8, textAlign: 'center'}}>
+          <div>Boardgame Played Tracker &copy; {new Date().getFullYear()}</div>
+          <div style={{marginTop: 4}}>Developed by <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
         </div>
       </div>
     </>

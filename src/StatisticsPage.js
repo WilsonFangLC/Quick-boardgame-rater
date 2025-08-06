@@ -825,7 +825,7 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
           marginBottom: '1rem',
           textShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          📊 Student Rating Statistics
+          📊 Rating Statistics
         </h1>
 
         {/* Statistics Summary */}
@@ -1096,6 +1096,18 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
           ) : null}
         </DragOverlay>
         </DndContext>
+      </div>
+
+      {/* Footer Credit */}
+      <div style={{
+        textAlign: 'center',
+        color: '#a1a1aa',
+        fontSize: '0.9rem',
+        marginTop: '2rem',
+        paddingBottom: '1rem'
+      }}>
+        <div>Boardgame Rating Statistics &copy; {new Date().getFullYear()}</div>
+        <div style={{marginTop: 4}}>Developed by <span style={{color: '#6366f1', fontWeight: 500}}>Lichi Fang</span></div>
       </div>
     </div>
   );

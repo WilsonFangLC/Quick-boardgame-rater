@@ -11,6 +11,7 @@ import {
   DragEndEvent
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { arrayToCsv, downloadCsv } from './csvUtils';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
@@ -218,8 +219,8 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
     const targetRange = tierRanges.find(range => range.key === targetTierKey);
     if (!targetRange) return;
 
-    // Set new rating to the middle of the target tier range
-    const newRating = targetRange.min + (targetRange.max - targetRange.min) / 2;
+    // Set new rating to the minimum of the target tier range
+    const newRating = targetRange.min;
     const roundedRating = Math.round(newRating * 10) / 10; // Round to 1 decimal place
 
     // Update the game's rating
@@ -290,10 +291,12 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: '8px',
           cursor: isDragging ? 'grabbing' : 'grab',
           transition: 'transform 0.2s',
-          transform: isDragging ? 'scale(1.05)' : 'scale(1)'
+          transform: isDragging ? 'scale(1.05)' : 'scale(1)',
+          height: 'auto'
         }}>
           {/* Game Thumbnail */}
           <a
@@ -378,8 +381,10 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
         <div style={{
           display: 'grid',
           gridTemplateColumns: '250px 1fr',
-          alignItems: 'center',
-          minHeight: '140px'
+          alignItems: 'stretch',
+          minHeight: '140px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           {/* Tier Label */}
           <div style={{
@@ -439,7 +444,8 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             flexWrap: 'wrap',
             gap: '16px',
             padding: '1.5rem',
-            alignItems: 'flex-start',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
             minHeight: '140px',
             background: isHighlighted ? 'rgba(99,102,241,0.05)' : 'transparent',
             transition: 'background 0.3s'
@@ -498,27 +504,9 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
     // Sort by rank to maintain order
     allRatedGames.sort((a, b) => a.Rank - b.Rank);
 
-    // Convert to CSV
-    const headers = Object.keys(allRatedGames[0]).join(',');
-    const rows = allRatedGames.map(game => 
-      Object.values(game).map(value => 
-        typeof value === 'string' && value.includes(',') 
-          ? `"${value}"` 
-          : value
-      ).join(',')
-    );
-    const csvContent = [headers, ...rows].join('\r\n');
-
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `boardgame_statistics_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Convert to CSV with proper escaping
+    const csvContent = arrayToCsv(allRatedGames);
+    downloadCsv(csvContent, `boardgame_statistics_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const exportToJSON = () => {
@@ -794,13 +782,16 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
       minHeight: '100vh',
       background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%)',
       fontFamily: 'Segoe UI, Arial, sans-serif',
-      padding: '2rem'
+      padding: '2rem',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
       {/* Header */}
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        marginBottom: '2rem'
+        marginBottom: '2rem',
+        width: '100%'
       }}>
         <button onClick={onBack} style={{
           padding: '0.75rem 1.5rem',
@@ -1006,13 +997,14 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
       </div>
 
       {/* Tier List */}
-      <DndContext
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        collisionDetection={pointerWithin}
-      >
-        <div ref={tierListRef} style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <DndContext
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          collisionDetection={pointerWithin}
+        >
+          <div ref={tierListRef} style={{ width: '100%' }}>
           {!hasRatedGames ? (
             <div style={{
               background: '#fff',
@@ -1103,7 +1095,8 @@ const StatisticsPage = ({ onBack, playedGames, onRatingChange }) => {
             </div>
           ) : null}
         </DragOverlay>
-      </DndContext>
+        </DndContext>
+      </div>
     </div>
   );
 };

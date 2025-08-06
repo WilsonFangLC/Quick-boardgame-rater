@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 // We'll use PapaParse for CSV parsing
 import Papa from 'papaparse';
 import StatisticsPage from './StatisticsPage';
+import { arrayToCsv, downloadCsv } from './csvUtils';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
@@ -692,7 +693,7 @@ function App() {
               transition: 'background 0.2s, color 0.2s'
             }}>Next</button>
             <button onClick={() => {
-              // Export results as CSV
+              // Export results as CSV with proper escaping
               const rows = games.map(g => ({
                 ID: g.ID,
                 Name: g.Name,
@@ -704,14 +705,8 @@ function App() {
                       ? 'Yes'
                       : ''
               }));
-              const csv = [Object.keys(rows[0]).join(','), ...rows.map(r => Object.values(r).join(','))].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'played_boardgames.csv';
-              a.click();
-              URL.revokeObjectURL(url);
+              const csvContent = arrayToCsv(rows);
+              downloadCsv(csvContent, 'played_boardgames.csv');
             }} style={{
               padding: '0.5rem 1.2rem',
               borderRadius: 8,

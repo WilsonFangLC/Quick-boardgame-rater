@@ -105,6 +105,26 @@ function App() {
       });
       e.preventDefault();
     }
+    // Left arrow: go to previous game
+    else if (e.key === 'ArrowLeft') {
+      setRating('');
+      setCurrent(c => {
+        const prev = Math.max(c - 1, 0);
+        forceUpdate(u => u + 1);
+        return prev;
+      });
+      e.preventDefault();
+    }
+    // Right arrow: go to next game
+    else if (e.key === 'ArrowRight') {
+      setRating('');
+      setCurrent(c => {
+        const next = Math.min(c + 1, games.length - 1);
+        forceUpdate(u => u + 1);
+        return next;
+      });
+      e.preventDefault();
+    }
   }, [current, games, loading, rating]);
 
   // Search functionality
@@ -628,6 +648,14 @@ function App() {
                         {line.includes('Enter') ? 'Enter' : '回车键'}
                       </span>
                       {line.split(line.includes('Enter') ? 'Enter' : '回车键')[1]}
+                    </>
+                  ) : line.includes('← →') || line.includes('方向键') ? (
+                    <>
+                      {line.split(line.includes('← →') ? '← →' : '方向键')[0]}
+                      <span style={{color:'#6366f1', backgroundColor: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>
+                        {line.includes('← →') ? '← →' : '方向键'}
+                      </span>
+                      {line.split(line.includes('← →') ? '← →' : '方向键')[1]}
                     </>
                   ) : line}
                 </div>

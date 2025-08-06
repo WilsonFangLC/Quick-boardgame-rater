@@ -1,14 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
-import html2canvas from 'html2canvas';
 
 const CSV_URL = process.env.PUBLIC_URL + '/selected_boardgames_2023.csv';
 
 const StatisticsPage = ({ onBack, playedGames }) => {
   const [studentTiers, setStudentTiers] = useState({});
   const [loading, setLoading] = useState(true);
-  const [isExportingImage, setIsExportingImage] = useState(false);
-  const tierListRef = useRef(null);
   const [stats, setStats] = useState({
     totalRated: 0,
     totalPlayed: 0,
@@ -177,7 +174,7 @@ const StatisticsPage = ({ onBack, playedGames }) => {
           : value
       ).join(',')
     );
-    const csvContent = [headers, ...rows].join('\r\n');
+    const csvContent = [headers, ...rows].join('\\n');
 
     // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -234,93 +231,10 @@ const StatisticsPage = ({ onBack, playedGames }) => {
     document.body.removeChild(link);
   };
 
-  const exportTierListImage = async () => {
-    if (!hasRatedGames) {
-      alert('No rated games to export!');
-      return;
-    }
-
-    if (!tierListRef.current) {
-      alert('Tier list not ready for export. Please try again.');
-      return;
-    }
-
-    setIsExportingImage(true);
-    
-    try {
-      // Create a temporary container with better styling for export
-      const exportContainer = document.createElement('div');
-      exportContainer.style.cssText = `
-        position: fixed;
-        top: -10000px;
-        left: -10000px;
-        width: 1200px;
-        background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
-        font-family: 'Segoe UI', Arial, sans-serif;
-        padding: 40px;
-        border-radius: 20px;
-      `;
-      
-      // Clone the tier list content
-      const tierListClone = tierListRef.current.cloneNode(true);
-      
-      // Add title to the export
-      const title = document.createElement('div');
-      title.innerHTML = `
-        <h1 style="
-          text-align: center;
-          color: #2d3748;
-          font-size: 2.5rem;
-          font-weight: 700;
-          margin-bottom: 2rem;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        ">📊 My Board Game Tier List</h1>
-        <div style="
-          text-align: center;
-          color: #64748b;
-          font-size: 1rem;
-          margin-bottom: 2rem;
-        ">Generated on ${new Date().toLocaleDateString()}</div>
-      `;
-      
-      exportContainer.appendChild(title);
-      exportContainer.appendChild(tierListClone);
-      document.body.appendChild(exportContainer);
-      
-      // Generate the image
-      const canvas = await html2canvas(exportContainer, {
-        backgroundColor: '#f8fafc',
-        scale: 2, // Higher quality
-        useCORS: true,
-        allowTaint: true,
-        width: 1200,
-        height: exportContainer.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        ignoreElements: (element) => {
-          // Skip elements that might cause issues
-          return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
-        }
-      });
-      
-      // Clean up
-      document.body.removeChild(exportContainer);
-      
-      // Download the image
-      const link = document.createElement('a');
-      link.download = `boardgame_tier_list_${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
-      link.click();
-      
-      // Show success message
-      alert('🎉 Tier list image exported successfully!');
-      
-    } catch (error) {
-      console.error('Error exporting image:', error);
-      alert('Failed to export image. Please try taking a manual screenshot.');
-    } finally {
-      setIsExportingImage(false);
-    }
+  const exportTierListImage = () => {
+    // This would require additional libraries like html2canvas
+    // For now, show instructions for manual screenshot
+    alert('Tier List Image Export:\\n\\n1. Take a screenshot of this page\\n2. Crop to include only the tier list section\\n3. Save as PNG/JPG\\n\\nAutomatic image export feature coming soon!');
   };
 
   return (
@@ -503,44 +417,38 @@ const StatisticsPage = ({ onBack, playedGames }) => {
 
             <button
               onClick={exportTierListImage}
-              disabled={isExportingImage}
               style={{
                 padding: '0.75rem 1.5rem',
                 borderRadius: 12,
                 border: 'none',
-                background: isExportingImage ? '#a78bfa' : '#8b5cf6',
+                background: '#8b5cf6',
                 color: '#fff',
                 fontWeight: 600,
                 fontSize: '1rem',
-                cursor: isExportingImage ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
                 boxShadow: '0 4px 16px rgba(139,92,246,0.2)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                opacity: isExportingImage ? 0.7 : 1
+                gap: '8px'
               }}
               onMouseOver={e => {
-                if (!isExportingImage) {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 6px 20px rgba(139,92,246,0.3)';
-                }
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 20px rgba(139,92,246,0.3)';
               }}
               onMouseOut={e => {
-                if (!isExportingImage) {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 16px rgba(139,92,246,0.2)';
-                }
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 16px rgba(139,92,246,0.2)';
               }}
             >
-              {isExportingImage ? '⏳ Generating...' : '🖼️ Export Image'}
+              🖼️ Export Image
             </button>
           </div>
         )}
       </div>
 
       {/* Tier List */}
-      <div ref={tierListRef} style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {!hasRatedGames ? (
           <div style={{
             background: '#fff',

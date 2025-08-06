@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 // We'll use PapaParse for CSV parsing
 import Papa from 'papaparse';
 import StatisticsPage from './StatisticsPage';
@@ -368,14 +368,6 @@ function App() {
                   outline: 'none',
                   transition: 'border-color 0.2s, box-shadow 0.2s'
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#4f46e5';
-                  e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#6366f1';
-                  e.target.style.boxShadow = 'none';
-                }}
               />
             </div>
 
@@ -493,7 +485,7 @@ function App() {
               overflow: 'hidden',
               background: '#f1f5f9',
             }}>
-              {Object.entries(imageCache.current).map(([url, img], index) => (
+              {Object.entries(imageCache.current).map(([url]) => (
                 <img
                   key={url}
                   src={url}

@@ -240,15 +240,12 @@ const StatisticsPage = ({ onBack, playedGames }) => {
       return;
     }
 
-    if (!tierListRef.current) {
-      alert('Tier list not ready for export. Please try again.');
-      return;
-    }
-
     setIsExportingImage(true);
     
     try {
-      // Create a temporary container with better styling for export
+      console.log('🔍 DEBUG: Starting export process...');
+      
+      // Create a container that replicates the exact statistics page layout
       const exportContainer = document.createElement('div');
       exportContainer.style.cssText = `
         position: fixed;
@@ -258,19 +255,15 @@ const StatisticsPage = ({ onBack, playedGames }) => {
         background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
         font-family: 'Segoe UI', Arial, sans-serif;
         padding: 40px;
-        border-radius: 20px;
       `;
       
-      // Clone the tier list content
-      const tierListClone = tierListRef.current.cloneNode(true);
-      
-      // Add title to the export
+      // Add title
       const title = document.createElement('div');
       title.innerHTML = `
         <h1 style="
           text-align: center;
           color: #2d3748;
-          font-size: 2.5rem;
+          font-size: 3rem;
           font-weight: 700;
           margin-bottom: 2rem;
           text-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -278,30 +271,174 @@ const StatisticsPage = ({ onBack, playedGames }) => {
         <div style="
           text-align: center;
           color: #64748b;
-          font-size: 1rem;
-          margin-bottom: 2rem;
+          font-size: 1.1rem;
+          margin-bottom: 3rem;
         ">Generated on ${new Date().toLocaleDateString()}</div>
       `;
-      
       exportContainer.appendChild(title);
+      
+      // Clone and modify the actual tier list
+      const tierListClone = tierListRef.current.cloneNode(true);
+      console.log('🔍 DEBUG: Cloned tier list');
+      
+      // Find all images
+      const images = tierListClone.querySelectorAll('img');
+      console.log(`🔍 DEBUG: Found ${images.length} images to process`);
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      // Process each image with detailed logging
+      const imagePromises = Array.from(images).map(async (img, index) => {
+        const originalSrc = img.src;
+        console.log(`🔍 DEBUG: Processing image ${index + 1}/${images.length}: ${originalSrc}`);
+        
+        return new Promise(async (resolve) => {
+          try {
+            // Method 1: Try to load the original image directly first
+            const testImg = new Image();
+            testImg.crossOrigin = 'anonymous';
+            
+            const loadPromise = new Promise((imgResolve, imgReject) => {
+              testImg.onload = () => {
+                console.log(`✅ DEBUG: Image ${index + 1} loaded directly`);
+                // Convert to canvas to ensure it works with html2canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 90;
+                canvas.height = 90;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(testImg, 0, 0, 90, 90);
+                img.src = canvas.toDataURL('image/jpeg', 0.9);
+                successCount++;
+                imgResolve();
+              };
+              testImg.onerror = () => {
+                console.log(`❌ DEBUG: Image ${index + 1} failed direct load`);
+                imgReject();
+              };
+              testImg.src = originalSrc;
+            });
+            
+            // Try direct load first with 5 second timeout
+            try {
+              await Promise.race([
+                loadPromise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Direct load timeout')), 5000))
+              ]);
+              resolve();
+              return;
+            } catch (directError) {
+              console.log(`⏰ DEBUG: Image ${index + 1} direct load failed/timeout`);
+            }
+            
+            // Method 2: Try CORS proxies
+            const proxies = [
+              'https://corsproxy.io/?',
+              'https://api.allorigins.win/raw?url='
+            ];
+            
+            let proxyWorked = false;
+            for (const proxy of proxies) {
+              try {
+                console.log(`🔄 DEBUG: Trying proxy ${proxy} for image ${index + 1}`);
+                const proxyUrl = proxy + encodeURIComponent(originalSrc);
+                
+                const proxyImg = new Image();
+                proxyImg.crossOrigin = 'anonymous';
+                
+                await new Promise((proxyResolve, proxyReject) => {
+                  proxyImg.onload = () => {
+                    console.log(`✅ DEBUG: Image ${index + 1} loaded via proxy ${proxy}`);
+                    // Convert to canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 90;
+                    canvas.height = 90;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(proxyImg, 0, 0, 90, 90);
+                    img.src = canvas.toDataURL('image/jpeg', 0.9);
+                    successCount++;
+                    proxyWorked = true;
+                    proxyResolve();
+                  };
+                  proxyImg.onerror = proxyReject;
+                  proxyImg.src = proxyUrl;
+                  setTimeout(proxyReject, 4000); // 4 second timeout per proxy
+                });
+                
+                if (proxyWorked) break;
+                
+              } catch (proxyError) {
+                console.log(`❌ DEBUG: Proxy ${proxy} failed for image ${index + 1}`);
+                continue;
+              }
+            }
+            
+            if (proxyWorked) {
+              resolve();
+              return;
+            }
+            
+            // Method 3: Create a nice placeholder
+            console.log(`🎨 DEBUG: Creating placeholder for image ${index + 1}`);
+            const canvas = document.createElement('canvas');
+            canvas.width = 90;
+            canvas.height = 90;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a nice gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 90, 90);
+            gradient.addColorStop(0, '#6366f1');
+            gradient.addColorStop(1, '#8b5cf6');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 90, 90);
+            
+            // Add border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, 88, 88);
+            
+            // Add game controller emoji
+            ctx.font = '28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('🎮', 45, 55);
+            
+            img.src = canvas.toDataURL();
+            failCount++;
+            
+          } catch (error) {
+            console.error(`💥 DEBUG: Complete failure for image ${index + 1}:`, error);
+            failCount++;
+          }
+          
+          resolve();
+        });
+      });
+      
+      console.log('⏳ DEBUG: Waiting for all images to process...');
+      await Promise.all(imagePromises);
+      console.log(`🔍 DEBUG: Image processing complete. Success: ${successCount}, Failed: ${failCount}`);
+      
       exportContainer.appendChild(tierListClone);
       document.body.appendChild(exportContainer);
       
+      console.log('⏳ DEBUG: Waiting additional 3 seconds for images to fully render...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      console.log('📸 DEBUG: Starting html2canvas...');
       // Generate the image
       const canvas = await html2canvas(exportContainer, {
         backgroundColor: '#f8fafc',
-        scale: 2, // Higher quality
-        useCORS: true,
+        scale: 2,
+        useCORS: false, // Disable CORS since we've already processed images
         allowTaint: true,
         width: 1200,
         height: exportContainer.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        ignoreElements: (element) => {
-          // Skip elements that might cause issues
-          return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
-        }
+        logging: true, // Enable html2canvas logging
+        imageTimeout: 0, // Disable timeout since we pre-processed images
       });
+      
+      console.log('✅ DEBUG: html2canvas completed');
       
       // Clean up
       document.body.removeChild(exportContainer);
@@ -312,12 +449,11 @@ const StatisticsPage = ({ onBack, playedGames }) => {
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
       
-      // Show success message
-      alert('🎉 Tier list image exported successfully!');
+      alert(`🎉 Export complete!\\n\\nImages loaded: ${successCount}\\nPlaceholders: ${failCount}\\n\\nCheck browser console for detailed logs.`);
       
     } catch (error) {
-      console.error('Error exporting image:', error);
-      alert('Failed to export image. Please try taking a manual screenshot.');
+      console.error('💥 DEBUG: Export failed:', error);
+      alert(`Export failed: ${error.message}\\n\\nCheck browser console for details.`);
     } finally {
       setIsExportingImage(false);
     }

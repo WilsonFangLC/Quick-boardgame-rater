@@ -44,21 +44,21 @@ const StatisticsPage = ({ onBack, playedGames }) => {
     // Group games by tier ranges for better organization
     const tierRanges = [
       { min: 10, max: 10, label: 'S+ Tier', key: '10.0' },
-      { min: 9.5, max: 9.9, label: 'S Tier', key: '9.5-9.9' },
-      { min: 9.0, max: 9.4, label: 'S- Tier', key: '9.0-9.4' },
-      { min: 8.5, max: 8.9, label: 'A+ Tier', key: '8.5-8.9' },
-      { min: 8.0, max: 8.4, label: 'A Tier', key: '8.0-8.4' },
-      { min: 7.5, max: 7.9, label: 'A- Tier', key: '7.5-7.9' },
-      { min: 7.0, max: 7.4, label: 'B+ Tier', key: '7.0-7.4' },
-      { min: 6.5, max: 6.9, label: 'B Tier', key: '6.5-6.9' },
-      { min: 6.0, max: 6.4, label: 'B- Tier', key: '6.0-6.4' },
-      { min: 5.5, max: 5.9, label: 'C+ Tier', key: '5.5-5.9' },
-      { min: 5.0, max: 5.4, label: 'C Tier', key: '5.0-5.4' },
-      { min: 4.5, max: 4.9, label: 'C- Tier', key: '4.5-4.9' },
-      { min: 4.0, max: 4.4, label: 'D+ Tier', key: '4.0-4.4' },
-      { min: 3.5, max: 3.9, label: 'D Tier', key: '3.5-3.9' },
-      { min: 3.0, max: 3.4, label: 'D- Tier', key: '3.0-3.4' },
-      { min: 0, max: 2.9, label: 'F Tier', key: '0-2.9' }
+      { min: 9.5, max: 9.9, label: 'S Tier', key: '9.5+' },
+      { min: 9.0, max: 9.4, label: 'S- Tier', key: '9+' },
+      { min: 8.5, max: 8.9, label: 'A+ Tier', key: '8.5+' },
+      { min: 8.0, max: 8.4, label: 'A Tier', key: '8+' },
+      { min: 7.5, max: 7.9, label: 'A- Tier', key: '7.5+' },
+      { min: 7.0, max: 7.4, label: 'B+ Tier', key: '7+' },
+      { min: 6.5, max: 6.9, label: 'B Tier', key: '6.5+' },
+      { min: 6.0, max: 6.4, label: 'B- Tier', key: '6+' },
+      { min: 5.5, max: 5.9, label: 'C+ Tier', key: '5.5+' },
+      { min: 5.0, max: 5.4, label: 'C Tier', key: '5+' },
+      { min: 4.5, max: 4.9, label: 'C- Tier', key: '4.5+' },
+      { min: 4.0, max: 4.4, label: 'D+ Tier', key: '4+' },
+      { min: 3.5, max: 3.9, label: 'D Tier', key: '3.5+' },
+      { min: 3.0, max: 3.4, label: 'D- Tier', key: '3+' },
+      { min: 0, max: 2.9, label: 'F Tier', key: '<3' }
     ];
 
     const groupedByTier = {};
@@ -78,7 +78,7 @@ const StatisticsPage = ({ onBack, playedGames }) => {
         if (!groupedByTier[tier.key]) {
           groupedByTier[tier.key] = {
             label: tier.label,
-            range: `${tier.min === tier.max ? tier.min : tier.min + '-' + tier.max}`,
+            range: tier.key,
             games: [],
             avgRating: tier.min + (tier.max - tier.min) / 2
           };
@@ -118,14 +118,6 @@ const StatisticsPage = ({ onBack, playedGames }) => {
     return '#6b7280'; // Gray for below 5
   };
 
-  const getTierLabel = (rating) => {
-    if (rating >= 9) return 'S Tier';
-    if (rating >= 8) return 'A Tier';
-    if (rating >= 7) return 'B Tier';
-    if (rating >= 6) return 'C Tier';
-    if (rating >= 5) return 'D Tier';
-    return 'F Tier';
-  };
 
   if (loading) {
     return (
@@ -342,37 +334,18 @@ const StatisticsPage = ({ onBack, playedGames }) => {
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        {/* Rank Number */}
-                        <div style={{
-                          background: getTierColor(tierData.avgRating),
-                          color: '#fff',
-                          borderRadius: '50%',
-                          width: '28px',
-                          height: '28px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.9rem',
-                          fontWeight: 'bold',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                        }}>
-                          #{game.rank}
-                        </div>
-                        
                         {/* Game Thumbnail */}
                         <a
                           href={`https://boardgamegeek.com${game.URL}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title={`#${game.rank} - ${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
+                          title={`${game.Name} (${game.Year}) - Your Rating: ${game.studentRating}`}
                           style={{
                             display: 'block',
                             borderRadius: 12,
                             overflow: 'hidden',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                            transition: 'transform 0.2s, box-shadow 0.2s',
-                            border: `3px solid ${getTierColor(tierData.avgRating)}`,
-                            position: 'relative'
+                            transition: 'transform 0.2s, box-shadow 0.2s'
                           }}
                           onMouseOver={e => {
                             e.currentTarget.style.transform = 'scale(1.05)';
@@ -393,25 +366,6 @@ const StatisticsPage = ({ onBack, playedGames }) => {
                               display: 'block'
                             }}
                           />
-                          {/* Rating Badge */}
-                          <div style={{
-                            position: 'absolute',
-                            top: '-8px',
-                            right: '-8px',
-                            background: getTierColor(tierData.avgRating),
-                            color: '#fff',
-                            borderRadius: '50%',
-                            width: '28px',
-                            height: '28px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.8rem',
-                            fontWeight: 'bold',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                          }}>
-                            {game.studentRating}
-                          </div>
                         </a>
                         
                         {/* Game Name */}
